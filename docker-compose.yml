@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_USER: precious, POSTGRES_PASSWORD: precious, POSTGRES_DB: precious18 }
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U precious -d precious18"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://precious:precious@db:5432/precious18
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports: ["3000:3000"]
+    restart: unless-stopped
+    command: sh -c "npx prisma db push && npx prisma db seed && node server.js"
+volumes: { pgdata: {} }

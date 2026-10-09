@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum Status {
+  DRAFT
+  PREVIEW
+  PUBLISHED
+  UNPUBLISHED
+}
+
+enum SiteState {
+  DRAFT
+  PREVIEW
+  PUBLISHED
+  UNPUBLISHED
+  MAINTENANCE
+}
+
+model Admin {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  role String @default("ADMIN")
+  createdAt DateTime @default(now())
+  logs ActivityLog[]
+}
+model Recipient {
+  id String @id @default(cuid())
+  fullName String @default("PRECIOUS MELIKAM CHISOM")
+  birthDate DateTime  // seed: 2008-11-23T00:00:00Z. Verified server-side only.
+  experience BirthdayExperience?
+  responses RecipientResponse[]
+}
+model BirthdayExperience {
+  id String @id @default(cuid())
+  recipientId String @unique
+  recipient Recipient @relation(fields: [recipientId], references: [id])
+  state SiteState @default(DRAFT)
+  settings ExperienceSettings?
+  chapters Chapter[]
+  message BirthdayMessage?
+  memories Memory[]
+  wishes Wish[]
+  reasons Reason[]
+  gifts Gift[]
+  media Media[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ExperienceSettings {
+  id String @id @default(cuid())
+  experienceId String @unique
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  reasonsTitle String @default("18 Little Things That Make You, You")
+  musicMediaId String?
+  enabledSections Json @default("{}")
+  closingMessage String @default("")
+}
+model Chapter {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  number Int
+  title String
+  kind String
+  position Int
+  status Status @default(DRAFT)
+  updatedAt DateTime @updatedAt
+  @@unique([experienceId, number])
+}
+model BirthdayMessage {
+  id String @id @default(cuid())
+  experienceId String @unique
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  body String
+  signature String?
+  status Status @default(DRAFT)
+}
+model Memory {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  title String
+  body String
+  memoryDate DateTime?
+  mediaId String?
+  position Int
+  status Status @default(DRAFT)
+}
+model Wish {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  body String
+  position Int
+  status Status @default(DRAFT)
+}
+model Reason {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  body String
+  position Int
+  status Status @default(DRAFT)
+}
+model Gift {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  title String
+  description String
+  selectable Boolean @default(true)
+  selected Boolean @default(false)
+  selectedAt DateTime?
+  position Int
+  status Status @default(DRAFT)
+}
+model Media {
+  id String @id @default(cuid())
+  experienceId String
+  experience BirthdayExperience @relation(fields: [experienceId], references: [id])
+  storageKey String
+  mimeType String
+  sizeBytes Int
+  kind String
+  caption String?
+  inGallery Boolean @default(false)
+  position Int @default(0)
+  createdAt DateTime @default(now())
+}
+model RecipientResponse {
+  id String @id @default(cuid())
+  recipientId String
+  recipient Recipient @relation(fields: [recipientId], references: [id])
+  message String?
+  reaction String?
+  mediaKey String?
+  createdAt DateTime @default(now())
+}
+model VerificationAttempt {
+  id String @id @default(cuid())
+  ipHash String
+  success Boolean
+  createdAt DateTime @default(now())
+  @@index([ipHash, createdAt])
+}
+model ActivityLog {
+  id String @id @default(cuid())
+  adminId String?
+  admin Admin? @relation(fields: [adminId], references: [id])
+  action String
+  entity String?
+  detail Json?
+  createdAt DateTime @default(now())
+}
