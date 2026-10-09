@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
 import { requireAdmin } from "@/lib/auth/session";
+import { isConfigured, remove } from "@/lib/storage/s3";
 
 const Status = z.enum(["DRAFT", "PREVIEW", "PUBLISHED", "UNPUBLISHED"]);
 const base = { position: z.number().int().min(0).default(0), status: Status.default("DRAFT") };
@@ -34,6 +35,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ reso
       ]);
       return NextResponse.json({ state: exp.state, messageStatus: message?.status ?? null, recipient: rec, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
     }
+    if (resource === "media") {
+      return NextResponse.json(await prisma.media.findMany({
+        where: { experienceId: exp.id },
+        orderBy: [{ position: "asc" }, { createdAt: "desc" }],
+        select: { id: true, mimeType: true, sizeBytes: true, kind: true, caption: true, inGallery: true, position: true, createdAt: true },
+      }));
+    }
     const r = R[resource]; if (!r) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(await (prisma as any)[r.model].findMany({ where: { experienceId: exp.id }, orderBy: { position: "asc" } }));
   } catch (e) { return e instanceof Response ? e : NextResponse.json({ error: "Server error" }, { status: 500 }); }
@@ -61,6 +69,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
   try {
     const { resource } = await params; const { adminId, exp, url } = await ctx(req, resource);
+    if (resource === "media") {
+      const id = url.searchParams.get("id");
+      if (!id) return NextResponse.json({ error: "Media item not found." }, { status: 404 });
+      const parsed = z.object({ caption: z.string().max(200).nullable().optional(), inGallery: z.boolean().optional(), position: z.number().int().min(0).optional() }).safeParse(await req.json());
+      if (!parsed.success) return NextResponse.json({ error: "Invalid media details." }, { status: 400 });
+      const updated = await prisma.media.updateMany({ where: { id, experienceId: exp.id }, data: parsed.data });
+      if (!updated.count) return NextResponse.json({ error: "This media item could not be found. Refresh and try again." }, { status: 404 });
+      await log(adminId, "media.update", id);
+      return NextResponse.json({ ok: true });
+    }
     const r = R[resource]; const id = url.searchParams.get("id"); if (!r || !id) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const data = r.schema.partial().parse(await req.json());
     const row = await (prisma as any)[r.model].updateMany({ where: { id, experienceId: exp.id }, data });
@@ -72,6 +90,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ re
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
   try {
     const { resource } = await params; const { adminId, exp, url } = await ctx(req, resource);
+    if (resource === "media") {
+      const id = url.searchParams.get("id");
+      if (!id) return NextResponse.json({ error: "Media item not found." }, { status: 404 });
+      if (!isConfigured()) return NextResponse.json({ error: "Media storage is not configured." }, { status: 503 });
+      const media = await prisma.media.findFirst({ where: { id, experienceId: exp.id }, select: { id: true, storageKey: true } });
+      if (!media) return NextResponse.json({ error: "Media item not found." }, { status: 404 });
+      await remove(media.storageKey);
+      await prisma.media.delete({ where: { id: media.id } });
+      await log(adminId, "media.delete", media.id);
+      return NextResponse.json({ ok: true });
+    }
     const r = R[resource]; const id = url.searchParams.get("id"); if (!r || !id) return NextResponse.json({ error: "Not found" }, { status: 404 });
     await (prisma as any)[r.model].deleteMany({ where: { id, experienceId: exp.id } });
     await log(adminId, `${resource}.delete`, id); return NextResponse.json({ ok: true });

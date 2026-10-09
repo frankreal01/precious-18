@@ -34,11 +34,11 @@ Compose waits for PostgreSQL, syncs the Prisma schema, seeds the initial admin a
 
 ## Admin workflow
 
-Sign in and add messages, memories, wishes, reasons, gifts, and chapter titles. New content starts as a draft. Publish individual items, then publish the experience from the dashboard. The recipient page only shows published content. Set the experience to maintenance while preparing it.
+Sign in and add messages, memories, wishes, reasons, gifts, chapter titles, and media. New content starts as a draft. Publish individual items, then publish the experience from the dashboard. The recipient page only shows published content. Set the experience to maintenance while preparing it.
 
 ## Media storage
 
-Uploads require an S3-compatible bucket (for example, Cloudflare R2). Set `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` in `.env`. The recipient media gallery, signed media delivery, music player, response uploads, and additional media/settings admin controls still need implementation; the current experience works without media storage.
+Uploads require an S3-compatible bucket (for example, Cloudflare R2). Set `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` in `.env`. Use the **Media** admin section to upload files, edit captions and display order, and choose which items appear in the recipient gallery. Gallery files are delivered through authenticated app routes. A standalone music player, voice/photo responses, additional settings/security pages, and draft preview still need implementation. The experience works without media storage when no uploads are needed.
 
 ## Database commands
 

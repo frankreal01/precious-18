@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-type AdminRow = { id: string; title?: string; body?: string; description?: string; status?: string; action?: string; message?: string; createdAt?: string };
+type AdminRow = { id: string; title?: string; body?: string; description?: string; status?: string; action?: string; message?: string; createdAt?: string; mimeType?: string; kind?: string; sizeBytes?: number; caption?: string | null; inGallery?: boolean; position?: number };
 type Dashboard = {
   recipient?: { fullName: string };
   state: string;
@@ -21,7 +21,7 @@ const fields: Record<string, { name: string; area?: boolean }[]> = {
   chapters: [{ name: "title" }],
   messages: [{ name: "body", area: true }, { name: "signature" }],
 };
-const navItems = ["dashboard", "messages", "memories", "wishes", "reasons", "gifts", "chapters"];
+const navItems = ["dashboard", "messages", "memories", "wishes", "reasons", "gifts", "chapters", "media"];
 
 async function api(path: string, method = "GET", body?: object) {
   const response = await fetch(`/api/admin/${path}`, {
@@ -39,6 +39,7 @@ export default function AdminSection() {
   const [rows, setRows] = useState<AdminRow[] | Dashboard | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [captions, setCaptions] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setError("");
@@ -71,8 +72,29 @@ export default function AdminSection() {
   }
 
   async function remove(id: string) {
+    if (section === "media" && !window.confirm("Delete this uploaded file from the media library?")) return;
     try { await api(`${section}?id=${encodeURIComponent(id)}`, "DELETE"); await load(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to delete this item."); }
+  }
+
+  async function uploadMedia(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/upload", { method: "POST", body: new FormData(form) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Upload failed. Please try again.");
+      form.reset();
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Upload failed. Please try again."); }
+    finally { setSaving(false); }
+  }
+
+  async function updateMedia(id: string, data: object) {
+    try { await api(`media?id=${encodeURIComponent(id)}`, "PATCH", data); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update media details."); }
   }
 
   const dashboard = section === "dashboard" && rows && !Array.isArray(rows) ? rows as Dashboard : null;
@@ -152,6 +174,40 @@ export default function AdminSection() {
                 <button className="text-button" onClick={() => void remove(row.id)}>Delete</button>
               </div>
             </div>)}
+          </section>
+        </div>}
+
+        {section === "media" && <div style={{ display: "grid", gap: 20 }}>
+          <section className="admin-panel">
+            <p className="eyebrow">Photos, video, and audio</p>
+            <h1>Your media library</h1>
+            <p className="body-copy" style={{ margin: "8px 0 24px" }}>Upload a keepsake, add a caption, then choose which files appear in the recipient gallery.</p>
+            <form onSubmit={uploadMedia} style={{ display: "grid", gap: 14 }}>
+              <label htmlFor="media-file" className="form-label" style={{ margin: 0 }}>Choose a file <span className="fine-print">JPG, PNG, WebP, MP4 or MP3 · up to 25 MB</span></label>
+              <input id="media-file" name="file" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,audio/mpeg" required className="text-input" style={{ paddingTop: 12 }} />
+              <div><button disabled={saving} className="primary-button">{saving ? "Uploading…" : "Upload to library"}</button></div>
+            </form>
+            <p className="fine-print" style={{ marginTop: 16 }}>Uploads need an S3-compatible bucket. Add the S3 settings to <code>.env</code> before uploading.</p>
+          </section>
+
+          <section className="admin-panel">
+            <p className="eyebrow">Your collection</p>
+            <h2 style={{ marginBottom: 10 }}>Saved media <span className="fine-print">({contentRows.length})</span></h2>
+            {!contentRows.length && <p className="body-copy" style={{ margin: "6px 0" }}>Your uploaded photos, videos, and audio will appear here.</p>}
+            {contentRows.map((row) => <article className="media-admin-row" key={row.id}>
+              <div className="media-admin-preview">
+                {row.kind === "image" && <img src={`/api/admin/media/${row.id}`} alt={row.caption || "Uploaded image"} />}
+                {row.kind === "video" && <video src={`/api/admin/media/${row.id}`} controls preload="metadata" aria-label={row.caption || "Uploaded video"} />}
+                {row.kind === "audio" && <div className="audio-memory"><span className="brand-mark" aria-hidden="true">♫</span><audio src={`/api/admin/media/${row.id}`} controls preload="metadata" aria-label={row.caption || "Uploaded audio"} /></div>}
+              </div>
+              <div className="media-admin-details">
+                <div className="media-admin-meta"><span>{row.mimeType}</span><span>{Math.max(1, Math.round((row.sizeBytes ?? 0) / 1024))} KB</span></div>
+                <label className="form-label" htmlFor={`caption-${row.id}`} style={{ margin: "14px 0 7px" }}>Caption</label>
+                <input id={`caption-${row.id}`} value={captions[row.id] ?? row.caption ?? ""} onChange={(event) => setCaptions((current) => ({ ...current, [row.id]: event.target.value }))} onBlur={(event) => { if (event.target.value !== (row.caption ?? "")) void updateMedia(row.id, { caption: event.target.value || null }); }} maxLength={200} placeholder="A little note about this memory" className="text-input" />
+                <label className="media-gallery-toggle"><input type="checkbox" checked={row.inGallery ?? false} onChange={(event) => void updateMedia(row.id, { inGallery: event.target.checked })} /> Show in recipient gallery</label>
+                <div className="media-admin-actions"><label className="fine-print" htmlFor={`position-${row.id}`}>Display order</label><input id={`position-${row.id}`} type="number" min="0" defaultValue={row.position ?? 0} onBlur={(event) => { const position = Number(event.target.value); if (position !== row.position) void updateMedia(row.id, { position }); }} className="media-order-input" /><button className="text-button" onClick={() => void remove(row.id)}>Delete file</button></div>
+              </div>
+            </article>)}
           </section>
         </div>}
       </div>

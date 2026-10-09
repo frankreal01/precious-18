@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-type Item = { id: string; number?: number; title?: string; body?: string; description?: string; selectable?: boolean };
+type Item = { id: string; number?: number; title?: string; body?: string; description?: string; selectable?: boolean; mimeType?: string; kind?: string; caption?: string | null; url?: string };
 type JourneyData = {
   maintenance?: boolean;
   recipient: { fullName: string };
   settings?: { reasonsTitle?: string; closingMessage?: string };
   message?: { body: string; signature?: string | null };
   chapters?: Item[];
+  media?: Item[];
   memories?: Item[];
   wishes?: Item[];
   reasons?: Item[];
@@ -55,11 +56,12 @@ export default function Journey() {
     </main>
   );
 
-  const list = (key: "chapters" | "memories" | "wishes" | "reasons" | "gifts"): Item[] => data[key] ?? [];
+  const list = (key: "chapters" | "memories" | "wishes" | "reasons" | "gifts" | "media"): Item[] => data[key] ?? [];
   const steps = [
     "welcome",
     ...(data.message ? ["letter"] : []),
     ...(list("chapters").length ? ["chapters"] : []),
+    ...(list("media").length ? ["gallery"] : []),
     ...(list("memories").length ? ["memories"] : []),
     ...(list("wishes").length ? ["wishes"] : []),
     ...(list("reasons").length ? ["reasons"] : []),
@@ -68,7 +70,7 @@ export default function Journey() {
     "finale",
   ];
   const step = steps[index];
-  const stepNames: Record<string, string> = { welcome: "A beginning", letter: "A letter", chapters: "Your chapters", memories: "Memories", wishes: "Birthday wishes", reasons: "All the little things", gift: "A little gift", respond: "A note from you", finale: "The next chapter" };
+  const stepNames: Record<string, string> = { welcome: "A beginning", letter: "A letter", chapters: "Your chapters", gallery: "Little moments", memories: "Memories", wishes: "Birthday wishes", reasons: "All the little things", gift: "A little gift", respond: "A note from you", finale: "The next chapter" };
   const progress = Math.round(((index + 1) / steps.length) * 100);
   const next = () => { setSubIndex(0); setIndex((current) => Math.min(current + 1, steps.length - 1)); };
   const NextButton = ({ label = "Continue" }: { label?: string }) => <button onClick={next} className="primary-button" style={{ marginTop: 32 }}>{label}<span aria-hidden="true">→</span></button>;
@@ -107,6 +109,16 @@ export default function Journey() {
               <NextButton />
             </>}
             {step === "chapters" && stepper(list("chapters"), (chapter) => <><p className="eyebrow" style={{ marginBottom: 8 }}>Chapter {chapter.number}</p><h2>{chapter.title}</h2></>, "Chapter")}
+            {step === "gallery" && <>
+              <h2>A few moments to keep</h2>
+              <div className="recipient-gallery">{list("media").map((item) => <figure key={item.id} className="gallery-item">
+                {item.kind === "image" && <img src={item.url} alt={item.caption || "A shared memory"} loading="lazy" />}
+                {item.kind === "video" && <video src={item.url} controls preload="metadata" aria-label={item.caption || "A shared memory video"} />}
+                {item.kind === "audio" && <div className="audio-memory"><span className="brand-mark" aria-hidden="true">♫</span><audio src={item.url} controls preload="metadata" aria-label={item.caption || "A shared memory recording"} /></div>}
+                {item.caption && <figcaption>{item.caption}</figcaption>}
+              </figure>)}</div>
+              <NextButton />
+            </>}
             {step === "memories" && stepper(list("memories"), (memory) => <><h2>{memory.title}</h2><p>{memory.body}</p></>, "Memory")}
             {step === "wishes" && stepper(list("wishes"), (wish) => <p>{wish.body}</p>, "Wish")}
             {step === "reasons" && <>

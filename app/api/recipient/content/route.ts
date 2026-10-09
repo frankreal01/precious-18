@@ -13,8 +13,13 @@ export async function GET() {
       chapters: pub,
       memories: pub, wishes: pub, reasons: pub,
       gifts: { ...pub, select: { id: true, title: true, description: true, selectable: true } },
+      media: {
+        where: { inGallery: true },
+        orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }],
+        select: { id: true, mimeType: true, kind: true, caption: true },
+      },
     },
   });
   if (!exp) return NextResponse.json({ maintenance: true });
-  return NextResponse.json(exp);
+  return NextResponse.json({ ...exp, media: exp.media.map((item) => ({ ...item, url: `/api/recipient/media/${item.id}` })) });
 }
