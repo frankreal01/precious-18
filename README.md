@@ -16,11 +16,11 @@ From this project directory, open PowerShell and run:
 npm.cmd run dev
 ```
 
-The setup script creates `.env` with fresh session secrets and an admin password, starts PostgreSQL, creates the database tables, and seeds the initial admin and recipient. Keep the printed admin password; it is stored in `.env` as well.
+The setup script creates `.env` with fresh session secrets and an admin password, starts PostgreSQL and local S3Mock storage, creates the database tables, and seeds the initial admin and recipient. Keep the printed admin password; it is stored in `.env` as well.
 
 Open [http://localhost:3000](http://localhost:3000) for the recipient page and [http://localhost:3000/admin/login](http://localhost:3000/admin/login) for the admin area. The seeded recipient birthday is 23 November 2008.
 
-To stop the local database, run `docker compose stop db`. To start it again, run `docker compose up -d db`. The database persists in the `pgdata` volume.
+To stop the local services, run `docker compose stop db s3mock`. To start them again, run `docker compose up -d db s3mock`. PostgreSQL and uploaded media persist in the `pgdata` and `s3data` volumes. The local S3Mock endpoint is `http://localhost:9090`; it is intended for development only.
 
 ## Run the full stack in Docker
 
@@ -38,7 +38,7 @@ Sign in and add messages, memories, wishes, reasons, gifts, chapter titles, and 
 
 ## Media storage
 
-Uploads require an S3-compatible bucket (for example, Cloudflare R2). Set `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` in `.env`. Use the **Media** admin section to upload files, edit captions and display order, and choose which items appear in the recipient gallery. Gallery files are delivered through authenticated app routes. A standalone music player, voice/photo responses, additional settings/security pages, and draft preview still need implementation. The experience works without media storage when no uploads are needed.
+Local setup uses Docker S3Mock, so the Media section works without cloud credentials. For a deployed environment, replace the local values for `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` with an S3-compatible bucket (such as Cloudflare R2). Use the **Media** admin section to upload files, edit captions and display order, and choose which items appear in the recipient gallery. Gallery files are delivered through authenticated app routes. A standalone music player, voice/photo responses, additional settings/security pages, and draft preview still need implementation. S3Mock is for local development only; use real object storage for deployment.
 
 ## Database commands
 
