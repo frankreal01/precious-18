@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-type Item = { id: string; title?: string; body?: string; description?: string; selectable?: boolean };
+type Item = { id: string; number?: number; title?: string; body?: string; description?: string; selectable?: boolean };
 type JourneyData = {
   maintenance?: boolean;
   recipient: { fullName: string };
   settings?: { reasonsTitle?: string; closingMessage?: string };
   message?: { body: string; signature?: string | null };
+  chapters?: Item[];
   memories?: Item[];
   wishes?: Item[];
   reasons?: Item[];
@@ -54,10 +55,11 @@ export default function Journey() {
     </main>
   );
 
-  const list = (key: "memories" | "wishes" | "reasons" | "gifts"): Item[] => data[key] ?? [];
+  const list = (key: "chapters" | "memories" | "wishes" | "reasons" | "gifts"): Item[] => data[key] ?? [];
   const steps = [
     "welcome",
     ...(data.message ? ["letter"] : []),
+    ...(list("chapters").length ? ["chapters"] : []),
     ...(list("memories").length ? ["memories"] : []),
     ...(list("wishes").length ? ["wishes"] : []),
     ...(list("reasons").length ? ["reasons"] : []),
@@ -66,7 +68,7 @@ export default function Journey() {
     "finale",
   ];
   const step = steps[index];
-  const stepNames: Record<string, string> = { welcome: "A beginning", letter: "A letter", memories: "Memories", wishes: "Birthday wishes", reasons: "All the little things", gift: "A little gift", respond: "A note from you", finale: "The next chapter" };
+  const stepNames: Record<string, string> = { welcome: "A beginning", letter: "A letter", chapters: "Your chapters", memories: "Memories", wishes: "Birthday wishes", reasons: "All the little things", gift: "A little gift", respond: "A note from you", finale: "The next chapter" };
   const progress = Math.round(((index + 1) / steps.length) * 100);
   const next = () => { setSubIndex(0); setIndex((current) => Math.min(current + 1, steps.length - 1)); };
   const NextButton = ({ label = "Continue" }: { label?: string }) => <button onClick={next} className="primary-button" style={{ marginTop: 32 }}>{label}<span aria-hidden="true">→</span></button>;
@@ -104,6 +106,7 @@ export default function Journey() {
               {data.message?.signature && <p className="journey-signature">{data.message.signature}</p>}
               <NextButton />
             </>}
+            {step === "chapters" && stepper(list("chapters"), (chapter) => <><p className="eyebrow" style={{ marginBottom: 8 }}>Chapter {chapter.number}</p><h2>{chapter.title}</h2></>, "Chapter")}
             {step === "memories" && stepper(list("memories"), (memory) => <><h2>{memory.title}</h2><p>{memory.body}</p></>, "Memory")}
             {step === "wishes" && stepper(list("wishes"), (wish) => <p>{wish.body}</p>, "Wish")}
             {step === "reasons" && <>

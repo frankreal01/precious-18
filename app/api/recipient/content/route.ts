@@ -10,6 +10,7 @@ export async function GET() {
     include: {
       recipient: { select: { fullName: true } }, settings: true,
       message: { where: { status: "PUBLISHED" } },
+      chapters: pub,
       memories: pub, wishes: pub, reasons: pub,
       gifts: { ...pub, select: { id: true, title: true, description: true, selectable: true } },
     },
