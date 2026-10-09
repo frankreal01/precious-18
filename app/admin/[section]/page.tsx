@@ -7,6 +7,7 @@ type AdminRow = { id: string; title?: string; body?: string; description?: strin
 type Dashboard = {
   recipient?: { fullName: string };
   state: string;
+  messageStatus: string | null;
   counts: Record<string, number>;
   responses: AdminRow[];
   logs: AdminRow[];
@@ -96,6 +97,11 @@ export default function AdminSection() {
             <h1>{dashboard.recipient?.fullName ?? "Birthday experience"}</h1>
             <p className="body-copy" style={{ margin: "8px 0 20px" }}>Review your story, prepare its chapters, and publish when everything feels just right.</p>
             <span className="status-pill"><span className="status-dot" />{dashboard.state.toLowerCase()}</span>
+            {(dashboard.state !== "PUBLISHED" || (dashboard.messageStatus && dashboard.messageStatus !== "PUBLISHED")) && <div className="admin-notice" role="status">
+              <strong>This experience is not visible to the recipient yet.</strong>
+              {dashboard.messageStatus && dashboard.messageStatus !== "PUBLISHED" && <p>Publish the message from the Messages section.</p>}
+              {dashboard.state !== "PUBLISHED" && <p>Then choose “Publish experience” below to make the recipient journey available.</p>}
+            </div>}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
               {[{ state: "DRAFT", label: "Set to draft" }, { state: "PUBLISHED", label: "Publish experience" }, { state: "UNPUBLISHED", label: "Unpublish" }, { state: "MAINTENANCE", label: "Pause experience" }].map(({ state, label }) => <button key={state} onClick={async () => { try { await api("state", "POST", { state }); await load(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update status."); } }} className={state === "PUBLISHED" ? "primary-button" : "secondary-button"}>{label}</button>)}
             </div>

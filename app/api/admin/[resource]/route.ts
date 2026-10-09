@@ -25,11 +25,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ reso
   try {
     const { resource } = await params; const { exp } = await ctx(req, resource);
     if (resource === "dashboard") {
-      const [memories, wishes, reasons, gifts, media, responses, logs, rec] = await Promise.all([
+      const [memories, wishes, reasons, gifts, media, responses, logs, rec, message] = await Promise.all([
         prisma.memory.count(), prisma.wish.count(), prisma.reason.count(), prisma.gift.count(), prisma.media.count(),
         prisma.recipientResponse.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
-        prisma.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }), prisma.recipient.findFirst({ select: { fullName: true, birthDate: true } })]);
-      return NextResponse.json({ state: exp.state, recipient: rec, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
+        prisma.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+        prisma.recipient.findFirst({ select: { fullName: true, birthDate: true } }),
+        prisma.birthdayMessage.findUnique({ where: { experienceId: exp.id }, select: { status: true } }),
+      ]);
+      return NextResponse.json({ state: exp.state, messageStatus: message?.status ?? null, recipient: rec, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
     }
     const r = R[resource]; if (!r) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(await (prisma as any)[r.model].findMany({ where: { experienceId: exp.id }, orderBy: { position: "asc" } }));
@@ -61,6 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ re
     const r = R[resource]; const id = url.searchParams.get("id"); if (!r || !id) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const data = r.schema.partial().parse(await req.json());
     const row = await (prisma as any)[r.model].updateMany({ where: { id, experienceId: exp.id }, data });
+    if (!row.count) return NextResponse.json({ error: "This item could not be found. Refresh the page and try again." }, { status: 404 });
     await log(adminId, `${resource}.update`, id); return NextResponse.json(row);
   } catch (e) { return e instanceof Response ? e : NextResponse.json({ error: "Invalid input" }, { status: 400 }); }
 }
