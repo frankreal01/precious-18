@@ -207,3 +207,7 @@
  GET / 200 in 952ms
  GET /admin/dashboard 200 in 947ms
  GET /journey 200 in 963ms
+ GET /admin/messages 200 in 3497ms
+ ○ Compiling /api/admin/[resource] ...
+ ✓ Compiled /api/admin/[resource] in 2.6s (466 modules)
+ GET /api/admin/messages 500 in 6381ms
