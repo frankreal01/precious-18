@@ -51,14 +51,15 @@ export default function AdminSection() {
     event.preventDefault();
     setSaving(true);
     setError("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const currentRows = Array.isArray(rows) ? rows : [];
     const body: Record<string, unknown> = { position: currentRows.length };
     fields[section]?.forEach(({ name }) => { body[name] = form.get(name); });
     if (section === "chapters") { body.number = currentRows.length + 1; body.kind = "custom"; }
     try {
       await api(section, "POST", body);
-      event.currentTarget.reset();
+      formElement.reset();
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save this item."); }
     finally { setSaving(false); }
