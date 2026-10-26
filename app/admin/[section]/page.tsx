@@ -183,7 +183,7 @@ export default function AdminSection() {
             <h1>Your media library</h1>
             <p className="body-copy" style={{ margin: "8px 0 24px" }}>Upload a keepsake, add a caption, then choose which files appear in the recipient gallery.</p>
             <form onSubmit={uploadMedia} style={{ display: "grid", gap: 14 }}>
-              <label htmlFor="media-file" className="form-label" style={{ margin: 0 }}>Choose a file <span className="fine-print">JPG, PNG, WebP, MP4 or MP3 · up to 25 MB</span></label>
+              <label htmlFor="media-file" className="form-label" style={{ margin: 0 }}>Choose a file <span className="fine-print">JPG, PNG, WebP, MP4 or MP3 · up to 4 MB</span></label>
               <input id="media-file" name="file" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,audio/mpeg" required className="text-input" style={{ paddingTop: 12 }} />
               <div><button disabled={saving} className="primary-button">{saving ? "Uploading…" : "Upload to library"}</button></div>
             </form>

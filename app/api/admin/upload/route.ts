@@ -5,7 +5,9 @@ import { requireAdmin } from "@/lib/auth/session";
 import { isConfigured, put } from "@/lib/storage/s3";
 
 const OK: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "audio/mpeg": "mp3" };
-const MAX = 25 * 1024 * 1024;
+// Vercel Functions cap the full request body at 4.5 MB. Leave room for
+// multipart/form-data boundaries and headers so uploads stay under that cap.
+const MAX = 4 * 1024 * 1024;
 const sniff = (b: Buffer, t: string) => // check magic bytes, not just the declared type
   t === "image/jpeg" ? b[0] === 0xff && b[1] === 0xd8 : t === "image/png" ? b.subarray(1, 4).toString() === "PNG"
   : t === "image/webp" ? b.subarray(8, 12).toString() === "WEBP" : t === "video/mp4" ? b.subarray(4, 8).toString() === "ftyp"
@@ -16,7 +18,7 @@ export async function POST(req: NextRequest) {
     const s = await requireAdmin();
     if (!isConfigured()) return NextResponse.json({ error: "Media storage is not configured. Add the S3 settings to .env first." }, { status: 503 });
     const f = (await req.formData()).get("file");
-    if (!(f instanceof File) || !OK[f.type] || f.size > MAX) return NextResponse.json({ error: "Use JPG, PNG, WebP, MP4 or MP3 under 25 MB." }, { status: 400 });
+    if (!(f instanceof File) || !OK[f.type] || f.size > MAX) return NextResponse.json({ error: "Use JPG, PNG, WebP, MP4 or MP3 up to 4 MB." }, { status: 400 });
     const buf = Buffer.from(await f.arrayBuffer());
     if (!sniff(buf, f.type)) return NextResponse.json({ error: "File contents don't match its type." }, { status: 400 });
     const key = `media/${randomUUID()}.${OK[f.type]}`; await put(key, buf, f.type);

@@ -38,12 +38,30 @@ Sign in and add messages, memories, wishes, reasons, gifts, chapter titles, and 
 
 ## Media storage
 
-Local setup uses Docker S3Mock, so the Media section works without cloud credentials. For a deployed environment, replace the local values for `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` with an S3-compatible bucket (such as Cloudflare R2). Use the **Media** admin section to upload files, edit captions and display order, and choose which items appear in the recipient gallery. Gallery files are delivered through authenticated app routes. A standalone music player, voice/photo responses, additional settings/security pages, and draft preview still need implementation. S3Mock is for local development only; use real object storage for deployment.
+Local setup uses Docker S3Mock, so the Media section works without cloud credentials. For a deployed environment, replace the local values for `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` with an S3-compatible bucket. Supabase Storage works with this application: create a private `precious-media` bucket, enable its S3 protocol, then use the endpoint, region, and server-only access-key pair shown in **Storage → S3 Configuration**. Use the direct storage endpoint (`https://<project-ref>.storage.supabase.co/storage/v1/s3`) when it is available. Use the **Media** admin section to upload files, edit captions and display order, and choose which items appear in the recipient gallery. Gallery files are delivered through authenticated app routes. Uploads are currently limited to 4 MB to fit Vercel's request body limit. S3Mock is for local development only; use real object storage for deployment.
+
+## Deploy to Vercel
+
+This project is linked to a Vercel project locally. To deploy it:
+
+1. Create a managed PostgreSQL database and an S3-compatible object storage bucket. Do not use the Docker PostgreSQL or S3Mock services in production.
+2. Add these variables in Vercel **Project Settings → Environment Variables**. Use separate databases for Production and Preview environments.
+   - `DATABASE_URL`: PostgreSQL connection string for that environment.
+   - `SESSION_SECRET` and `RECIPIENT_COOKIE_SECRET`: two different random secrets, each at least 32 characters.
+   - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`: production bucket endpoint, region, name, and private credentials.
+   - `ADMIN_EMAIL` and `ADMIN_PASSWORD`: the initial administrator credentials; use a password of at least 12 characters.
+3. Keep the framework preset as **Next.js**. The included `vercel.json` sets the build command to `npm run vercel-build`, which applies checked-in Prisma migrations before building.
+4. Deploy once. Then seed the new database once with the initial admin and recipient records by running `npm run db:seed` from a trusted terminal with that environment's `DATABASE_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` set. Do not commit or share these values.
+
+The initial migration assumes a new, empty hosted database. If the hosted database already contains tables created with `prisma db push`, baseline it before using this migration workflow; do not deploy the initial migration against that database as-is. For local Docker development, continue using `npm run db:push`.
+
+Vercel's function request and response body limit is 4.5 MB, so the media upload route accepts files up to 4 MB to leave room for multipart form data. Larger media needs direct-to-bucket signed uploads.
 
 ## Database commands
 
 - `npm.cmd run db:push` applies the current Prisma schema to the configured database.
 - `npm.cmd run db:seed` creates the initial admin and recipient if they do not already exist.
 - `npm.cmd run db:setup` runs both commands.
+- `npm.cmd run db:migrate:deploy` applies checked-in migrations to a deployment database.
 
 For deployments, provide a managed PostgreSQL database and strong secrets through the host's environment settings. Use HTTPS and apply schema changes as part of deployment. The included Compose credentials and database port are for local development only.
