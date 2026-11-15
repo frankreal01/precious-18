@@ -65,3 +65,4 @@ Vercel's function request and response body limit is 4.5 MB, so the media upload
 - `npm.cmd run db:migrate:deploy` applies checked-in migrations to a deployment database.
 
 For deployments, provide a managed PostgreSQL database and strong secrets through the host's environment settings. Use HTTPS and apply schema changes as part of deployment. The included Compose credentials and database port are for local development only.
+
