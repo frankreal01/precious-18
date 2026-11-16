@@ -64,8 +64,12 @@ export default function Landing() {
               inputMode="numeric"
               autoComplete="bday"
               placeholder="DD/MM/YYYY"
+              maxLength={10}
               value={value}
-              onChange={(event) => setValue(event.target.value)}
+              onChange={(event) => {
+                const digits = event.target.value.replace(/\D/g, "").slice(0, 8);
+                setValue([digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join("/"));
+              }}
               className="text-input"
               aria-describedby="birthday-help birthday-error"
               required
