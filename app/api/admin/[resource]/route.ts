@@ -36,15 +36,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ reso
       return NextResponse.json({ state: exp.state, messageStatus: message?.status ?? null, recipient: rec, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
     }
         if (resource === "media") {
-      return NextResponse.json(await prisma.media.findMany({
+            return NextResponse.json(await prisma.media.findMany({
         where: { experienceId: exp.id },
         orderBy: [{ position: "asc" }, { createdAt: "desc" }],
         select: { id: true, mimeType: true, sizeBytes: true, kind: true, caption: true, inGallery: true, position: true, createdAt: true },
       }));
     }
     const r = R[resource]; if (!r) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(await (prisma as any)[r.model].findMany({ where: { experienceId: exp.id }, ...(resource === "messages" ? {} : { orderBy: { position: "asc" } }) }));
-    }
+        return NextResponse.json(await (prisma as any)[r.model].findMany({ where: { experienceId: exp.id }, ...(resource === "messages" ? {} : { orderBy: { position: "asc" } }) }));
+    {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
