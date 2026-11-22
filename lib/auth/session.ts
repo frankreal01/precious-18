@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-const key = (n: string) => new TextEncoder().encode(process.env[n]!);
+const key = (n: string) => {
+  const value = process.env[n];
+  if (!value) throw new Error(`${n} is not set. Add it to the environment variables before signing in.`);
+  return new TextEncoder().encode(value);
+};
 type Scope = "admin" | "recipient";
 const cfg = {
   admin: { name: "adm_session", secret: "SESSION_SECRET", ttl: 60 * 60 * 8 },
