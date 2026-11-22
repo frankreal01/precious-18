@@ -9,7 +9,6 @@ export async function GET() {
     where: { state: "PUBLISHED" },
     include: {
       recipient: { select: { fullName: true } }, settings: true,
-      message: { where: { status: "PUBLISHED" } },
       chapters: pub,
       memories: pub, wishes: pub, reasons: pub,
       gifts: { ...pub, select: { id: true, title: true, description: true, selectable: true, selected: true } },
@@ -21,5 +20,6 @@ export async function GET() {
     },
   });
   if (!exp) return NextResponse.json({ maintenance: true });
-  return NextResponse.json({ ...exp, media: exp.media.map((item) => ({ ...item, url: `/api/recipient/media/${item.id}` })) });
+  const message = await prisma.birthdayMessage.findFirst({ where: { experienceId: exp.id, status: "PUBLISHED" }, select: { body: true, signature: true } });
+  return NextResponse.json({ ...exp, message, media: exp.media.map((item) => ({ ...item, url: `/api/recipient/media/${item.id}` })) });
 }
