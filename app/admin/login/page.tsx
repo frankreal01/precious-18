@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function Login() {
   const [error, setError] = useState("");
@@ -18,7 +19,7 @@ export default function Login() {
         body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
       });
       if (response.ok) window.location.assign("/admin/dashboard");
-      else setError((await response.json()).error ?? "Those details could not be verified.");
+      else setError((await response.json().catch(() => ({}))).error ?? "Those details could not be verified.");
     } catch {
       setError("We couldn't connect just now. Please try again.");
     } finally {
@@ -29,9 +30,9 @@ export default function Login() {
   return (
     <main className="screen-shell">
       <form onSubmit={signIn} className="paper-card login-card">
-        <div className="brand-mark" aria-hidden="true">♡</div>
+        <BrandMark />
         <p className="eyebrow">Private keepsake</p>
-        <h1 className="display-heading" style={{ fontSize: 36 }}>Welcome back</h1>
+        <h1 className="display-heading" style={{ fontSize: 44 }}>Welcome back</h1>
         <p className="body-copy" style={{ marginTop: 12 }}>Sign in to care for this story.</p>
         <label htmlFor="admin-email" className="form-label">Email address</label>
         <input id="admin-email" name="email" type="email" autoComplete="username" required placeholder="you@example.com" className="text-input" />
