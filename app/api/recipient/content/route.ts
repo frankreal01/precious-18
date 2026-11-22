@@ -12,7 +12,7 @@ export async function GET() {
       message: { where: { status: "PUBLISHED" } },
       chapters: pub,
       memories: pub, wishes: pub, reasons: pub,
-      gifts: { ...pub, select: { id: true, title: true, description: true, selectable: true } },
+      gifts: { ...pub, select: { id: true, title: true, description: true, selectable: true, selected: true } },
       media: {
         where: { inGallery: true },
         orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }],
