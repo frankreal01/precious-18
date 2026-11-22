@@ -6,4 +6,4 @@ export const s3 = new S3Client({ region: process.env.S3_REGION || "auto", endpoi
 export const put = (Key: string, Body: Buffer, ContentType: string) =>
   s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET!, Key, Body, ContentType }));
 export const remove = (Key: string) => s3.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET!, Key }));
-export const get = (Key: string) => s3.send(new GetObjectCommand({ Bucket: process.env.S3_BUCKET!, Key }));
+export const get = (Key: string, Range?: string) => s3.send(new GetObjectCommand({ Bucket: process.env.S3_BUCKET!, Key, ...(Range ? { Range } : {}) }));
