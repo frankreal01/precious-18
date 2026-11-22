@@ -18,6 +18,6 @@ const p = new PrismaClient();
   if (!(await p.recipient.findFirst())) {
     const r = await p.recipient.create({ data: { fullName: "PRECIOUS MELIKAM CHISOM", birthDate: new Date("2008-11-23T00:00:00Z") } });
     const e = await p.birthdayExperience.create({ data: { recipientId: r.id } });
-    await p.experienceSettings.create({ data: { experienceId: e.id, closingMessage: "Edit this closing message in /admin/settings." } });
+    await p.experienceSettings.create({ data: { experienceId: e.id, closingMessage: "" } });
   }
 })().finally(() => p.$disconnect());
