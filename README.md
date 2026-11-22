@@ -66,3 +66,12 @@ Vercel's function request and response body limit is 4.5 MB, so the media upload
 
 For deployments, provide a managed PostgreSQL database and strong secrets through the host's environment settings. Use HTTPS and apply schema changes as part of deployment. The included Compose credentials and database port are for local development only.
 
+## Launch checklist
+
+1. In Vercel, set `DATABASE_URL`, `SESSION_SECRET`, `RECIPIENT_COOKIE_SECRET` and, for photos/audio/video, the five `S3_*` values. With Supabase, use the **Session pooler** connection string (port 5432) because Vercel cannot reach the direct database host over IPv4.
+2. Deploy. The build runs `prisma migrate deploy`, so a missing or wrong `DATABASE_URL` fails the build at that step.
+3. Seed once from a trusted terminal: set `DATABASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters), then run `npm run db:seed`. The seed resets the admin password every time it runs, so do not run it again unless you mean to.
+4. Sign in at `/admin/login`. Write the closing message under **Settings**, add the letter, memories, wishes, reasons, gifts and chapters, and **Publish** each item. Only published items are shown.
+5. On the dashboard choose **Publish experience**. Until then she sees "Your story is being prepared."
+6. Test as her: open `/`, enter the birthday as DD/MM/YYYY, and click through to the end. Use **Pause experience** if you need to hide it again.
+
