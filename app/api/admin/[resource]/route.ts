@@ -26,14 +26,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ reso
   try {
     const { resource } = await params; const { exp } = await ctx(req, resource);
     if (resource === "dashboard") {
-      const [memories, wishes, reasons, gifts, media, responses, logs, rec, message] = await Promise.all([
+      const [memories, wishes, reasons, gifts, media, responses, logs, rec, message, chosenGift] = await Promise.all([
         prisma.memory.count(), prisma.wish.count(), prisma.reason.count(), prisma.gift.count(), prisma.media.count(),
         prisma.recipientResponse.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
         prisma.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
         prisma.recipient.findFirst({ select: { fullName: true, birthDate: true } }),
         prisma.birthdayMessage.findUnique({ where: { experienceId: exp.id }, select: { status: true } }),
+        prisma.gift.findFirst({ where: { experienceId: exp.id, selected: true }, select: { title: true, selectedAt: true } }),
       ]);
-      return NextResponse.json({ state: exp.state, messageStatus: message?.status ?? null, recipient: rec, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
+      return NextResponse.json({ state: exp.state, messageStatus: message?.status ?? null, recipient: rec, chosenGift, counts: { memories, wishes, reasons, gifts, media }, responses, logs });
+    }
+    if (resource === "settings") {
+      const settings = await prisma.experienceSettings.findUnique({ where: { experienceId: exp.id }, select: { reasonsTitle: true, closingMessage: true } });
+      return NextResponse.json(settings ?? { reasonsTitle: "18 Little Things That Make You, You", closingMessage: "" });
     }
     if (resource === "media") {
       return NextResponse.json(await prisma.media.findMany({
@@ -63,12 +68,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
       ? await prisma.birthdayMessage.upsert({ where: { experienceId: exp.id }, update: data, create: { ...data, experienceId: exp.id } as any })
       : await (prisma as any)[r.model].create({ data: { ...data, experienceId: exp.id } });
     await log(adminId, `${resource}.create`, row.id); return NextResponse.json(row);
-  } catch (e) { return e instanceof Response ? e : e instanceof z.ZodError ? NextResponse.json({ error: "Invalid input" }, { status: 400 }) : NextResponse.json({ error: "Server error" }, { status: 500 }); }
+  } catch (e) { return e instanceof Response ? e : e instanceof z.ZodError ? NextResponse.json({ error: "Invalid input" }, { status: 400 }) : (e as { code?: string })?.code === "P2002" ? NextResponse.json({ error: "That chapter number is already used. Refresh and try again." }, { status: 409 }) : NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
   try {
     const { resource } = await params; const { adminId, exp, url } = await ctx(req, resource);
+    if (resource === "settings") {
+      const parsed = z.object({ reasonsTitle: z.string().trim().min(1).max(120).optional(), closingMessage: z.string().max(4000).optional() }).safeParse(await req.json());
+      if (!parsed.success) return NextResponse.json({ error: "Invalid settings." }, { status: 400 });
+      await prisma.experienceSettings.upsert({ where: { experienceId: exp.id }, update: parsed.data, create: { experienceId: exp.id, ...parsed.data } });
+      await log(adminId, "settings.update", exp.id);
+      return NextResponse.json({ ok: true });
+    }
     if (resource === "media") {
       const id = url.searchParams.get("id");
       if (!id) return NextResponse.json({ error: "Media item not found." }, { status: 404 });
@@ -84,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ re
     const row = await (prisma as any)[r.model].updateMany({ where: { id, experienceId: exp.id }, data });
     if (!row.count) return NextResponse.json({ error: "This item could not be found. Refresh the page and try again." }, { status: 404 });
     await log(adminId, `${resource}.update`, id); return NextResponse.json(row);
-  } catch (e) { return e instanceof Response ? e : NextResponse.json({ error: "Invalid input" }, { status: 400 }); }
+  } catch (e) { return e instanceof Response ? e : e instanceof z.ZodError ? NextResponse.json({ error: "Invalid input" }, { status: 400 }) : NextResponse.json({ error: "Server error" }, { status: 500 }); }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
@@ -105,4 +117,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ r
     await (prisma as any)[r.model].deleteMany({ where: { id, experienceId: exp.id } });
     await log(adminId, `${resource}.delete`, id); return NextResponse.json({ ok: true });
   } catch (e) { return e instanceof Response ? e : NextResponse.json({ error: "Server error" }, { status: 500 }); }
-                                                              }
+}
