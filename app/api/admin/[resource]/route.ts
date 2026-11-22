@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
     if (r.max && (await (prisma as any)[r.model].count({ where: { experienceId: exp.id } })) >= r.max)
       return NextResponse.json({ error: `Limit of ${r.max} reached.` }, { status: 400 });
     const row = resource === "messages"
-      ? await prisma.birthdayMessage.upsert({ where: { experienceId: exp.id }, update: data, create: { ...data, experienceId: exp.id } as any })
+      ? await prisma.birthdayMessage.upsert({ where: { experienceId: exp.id }, update: { body: data.body, signature: data.signature }, create: { ...data, experienceId: exp.id } as any })
       : await (prisma as any)[r.model].create({ data: { ...data, experienceId: exp.id } });
     await log(adminId, `${resource}.create`, row.id); return NextResponse.json(row);
   } catch (e) { return e instanceof Response ? e : e instanceof z.ZodError ? NextResponse.json({ error: "Invalid input" }, { status: 400 }) : (e as { code?: string })?.code === "P2002" ? NextResponse.json({ error: "That chapter number is already used. Refresh and try again." }, { status: 409 }) : NextResponse.json({ error: "Server error" }, { status: 500 }); }
